@@ -1,4 +1,4 @@
-package main
+package ezpwngo
 
 import (
 	"bufio"
@@ -8,23 +8,12 @@ import (
 	"os"
 )
 
-func main() {
-	c := NewPwnClient("", true)
-	if err := c.Connect(); err != nil {
-		panic(err)
-	}
-	defer c.Close()
-	c.StartInteractive()
-
-	c.RecvLine()
-	c.SendLine("aiue")
-	c.StartInteractive()
-}
-
 type PwnClient struct {
 	addr   string
 	conn   net.Conn
 	stdout bool
+	reader *bufio.Reader
+	writer *bufio.Writer
 }
 
 func NewPwnClient(addr string, stdout bool) *PwnClient {
@@ -37,6 +26,9 @@ func (c *PwnClient) Connect() error {
 		return err
 	}
 	c.conn = conn
+
+	c.reader = bufio.NewReader(c.conn)
+	c.writer = bufio.NewWriter(c.conn)
 	return nil
 }
 
@@ -71,12 +63,12 @@ func (c *PwnClient) RecvLine() string {
 	}
 	str := string(buf)
 	fmt.Println(str)
+	// fmt.Println(buf)
 	return str
 }
 
 func (c *PwnClient) RecvLineBytes() ([]byte, error) {
-	reader := bufio.NewReader(c.conn)
-	line, _, err := reader.ReadLine()
+	line, _, err := c.reader.ReadLine()
 	if err != nil {
 		return []byte{}, err
 	}
@@ -84,12 +76,11 @@ func (c *PwnClient) RecvLineBytes() ([]byte, error) {
 }
 
 func (c *PwnClient) SendLine(str string) int {
-	writer := bufio.NewWriter(c.conn)
-	n, err := writer.WriteString(str)
+	n, err := c.writer.WriteString(str)
 	if err != nil {
 		panic(err)
 	}
-	writer.Flush()
+	c.writer.Flush()
 	return n
 }
 
